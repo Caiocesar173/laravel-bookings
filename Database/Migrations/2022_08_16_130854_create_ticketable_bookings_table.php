@@ -17,8 +17,8 @@ class CreateTicketableBookingsTable extends Migration
         Schema::create('ticketable_bookings', function (Blueprint $table) {
             $table->uuid('id')->primary();
             
-            $table->uuid('ticket_id')->unsigned();
-            $table->uuid('customer_id')->unsigned();
+            $table->uuid('ticket_id');
+            $table->uuid('customer_id');
             $table->decimal('paid')->default('0.00');
             $table->string('currency', 3)->nullable();
             $table->boolean('is_approved')->default(false);
