@@ -2,7 +2,6 @@
     "name": "caiocesar173/laravel-bookings",
     "description": "Booking Laravel Package",
     "license": "MIT",
-    "minimum-stability": "stable",
     "require": {
         "php": "^7.3|^8.0",
         "caiocesar173/laravel-utils": "dev-main",
