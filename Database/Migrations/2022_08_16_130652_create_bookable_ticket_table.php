@@ -5,8 +5,9 @@ use Illuminate\Database\Migrations\Migration;
 use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Support\Facades\Schema;
 
-class CreateTicketableBookingsTable extends Migration
+class CreateBookableTicketTable extends Migration
 {
+    
     /**
      * Run the migrations.
      *
@@ -14,18 +15,20 @@ class CreateTicketableBookingsTable extends Migration
      */
     public function up()
     {
-        Schema::create('ticketable_bookings', function (Blueprint $table) {
+        Schema::create('bookable_tickets', function (Blueprint $table) {
             $table->uuid('id')->primary();
-            
-            $table->uuid('ticket_id');
-            $table->uuid('customer_id');
-            $table->decimal('paid')->default('0.00');
-            $table->string('currency', 3)->nullable();
+            $table->string('slug');
+			$table->foreignUuid('booking')->references('id')->on('bookable_bookings')->onDelete('cascade');
+            $table->uuidMorphs('responsable');
+            $table->decimal('price')->default(0.00);
+			$table->foreignUuid('currencies')->references('id')->on('currencies')->onDelete('cascade');
+            $table->integer('quantity')->nullable()->default(1);
+            $table->bigInteger('sort_order')->unsigned();
+            $table->boolean('is_paied')->default(false);
             $table->boolean('is_approved')->default(false);
             $table->boolean('is_confirmed')->default(false);
             $table->boolean('is_attended')->default(false);
             $table->text('notes')->nullable();
-            
             $table->enum('status', StatusEnum::keys())->default(StatusEnum::ACTIVE);
             $table->timestamps();
             $table->softDeletes();
@@ -39,6 +42,7 @@ class CreateTicketableBookingsTable extends Migration
      */
     public function down()
     {
-        Schema::dropIfExists('ticketable_bookings');
+        Schema::disableForeignKeyConstraints();
+        Schema::dropIfExists('bookable_tickets');
     }
 }

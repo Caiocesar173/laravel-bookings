@@ -6,15 +6,14 @@ use Caiocesar173\Utils\Rules\UuidRule;
 use Caiocesar173\Utils\Enum\StatusEnum;
 use Caiocesar173\Booking\Enum\DatesRangeEnum;
 use Caiocesar173\Utils\Abstracts\ModelAbstract;
-use Caiocesar173\Utils\Database\Factories\BookableAvailabilityFactory;
-
-use Illuminate\Validation\Rule;
+use Caiocesar173\Utils\Database\Factories\BookableFeeFactory;
 use Illuminate\Database\Eloquent\Factories\Factory;
+use Illuminate\Validation\Rule;
 use Illuminate\Database\Eloquent\Relations\MorphTo;
 
-class BookableAvailability extends ModelAbstract
+class BookableFee extends ModelAbstract
 {
-    protected $table = 'bookable_availabilities';
+    protected $table = 'bookable_rates';
     protected $primaryKey = 'id';
 
     /**
@@ -26,7 +25,8 @@ class BookableAvailability extends ModelAbstract
         'range',
         'from',
         'to',
-        'is_bookable',
+        'base_cost',
+        'unit_cost',
         'priority',
         'status',
     ];
@@ -38,9 +38,10 @@ class BookableAvailability extends ModelAbstract
         'bookable_id'   => 'string',
         'bookable_type' => 'string',
         'range'         => 'string',
-        'from'          => 'datetime:Y-m-d h:i:s',
-        'to'            => 'datetime:Y-m-d h:i:s',
-        'is_bookable'   => 'boolean',
+        'from'          => 'datetime:Y-m-d H:i:s',
+        'to'            => 'datetime:Y-m-d H:i:s',
+        'base_cost'     => 'float',
+        'unit_cost'     => 'float',
         'priority'      => 'integer',
         'status'        => 'string',
     ];
@@ -55,14 +56,14 @@ class BookableAvailability extends ModelAbstract
         $this->mergeRules([
             'bookable_id'   => ['required', new UuidRule],
             'bookable_type' => ['required', 'string'],
+            'range'         => ['required', Rule::in(DatesRangeEnum::keys())],
             'from'          => ['nullable', 'date:Y-m-d h:i:s'],
-            'to'            => ['nullable', 'date:Y-m-d h:i:s'],
-            'is_bookable'   => ['nullable', 'boolean'],
+            'to'            => ['nullable', 'date:Y-m-d h:i:s', 'after_or_equal:from'],
+            'base_cost'     => ['nullable', 'numeric'],
+            'unit_cost'     => ['required', 'numeric'],
             'priority'      => ['nullable', 'integer'],
-            'range'         => ['nullable',  Rule::in(DatesRangeEnum::keys())],
             'status'        => ['nullable', Rule::in(StatusEnum::keys())],
         ]);
-
 
         parent::__construct($attributes);
     }
@@ -79,6 +80,6 @@ class BookableAvailability extends ModelAbstract
 
     protected static function newFactory(): Factory
     {
-        return BookableAvailabilityFactory::new();
+        return BookableFeeFactory::new();
     }
 }

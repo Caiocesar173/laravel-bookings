@@ -2,22 +2,23 @@
 
 namespace Caiocesar173\Booking\Entities;
 
+use Caiocesar173\Utils\Rules\UuidRule;
+use Caiocesar173\Utils\Enum\StatusEnum;
+use Caiocesar173\Utils\Entities\Currency;
 use Caiocesar173\Utils\Abstracts\ModelAbstract;
-use Caiocesar173\Utils\Traits\ValidatingTrait;
-
+use Caiocesar173\Utils\Database\Factories\BookableBookingFactory;
 use Carbon\Carbon;
+use Illuminate\Support\Fluent;
+use Illuminate\Validation\Rule;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Builder;
+use Illuminate\Database\Eloquent\Factories\Factory;
 use Illuminate\Database\Eloquent\Relations\MorphTo;
-use Illuminate\Database\Eloquent\Factories\HasFactory;
 
 use Spatie\SchemalessAttributes\SchemalessAttributes;
 
-abstract class BookableBooking extends ModelAbstract
+class BookableBooking extends ModelAbstract
 {
-    use HasFactory;
-    use ValidatingTrait;
-
     protected $table = 'bookable_bookings';
     protected $primaryKey = 'id';
 
@@ -39,50 +40,28 @@ abstract class BookableBooking extends ModelAbstract
         'canceled_at',
         'options',
         'notes',
+        'status',
     ];
 
     /**
      * {@inheritdoc}
      */
     protected $casts = [
-        'bookable_id' => 'string',
+        'bookable_id'   => 'string',
         'bookable_type' => 'string',
-        'customer_id' => 'integer',
+        'customer_id'   => 'string',
         'customer_type' => 'string',
-        'starts_at' => 'datetime',
-        'ends_at' => 'datetime',
-        'price' => 'float',
-        'quantity' => 'integer',
-        'total_paid' => 'float',
-        'currency' => 'string',
-        'formula' => 'json',
-        'canceled_at' => 'datetime',
-        'options' => 'array',
-        'notes' => 'string',
+        'starts_at'     => 'datetime:Y-m-d H:i:s',
+        'ends_at'       => 'datetime:Y-m-d H:i:s',
+        'price'         => 'float',
+        'quantity'      => 'integer',
+        'total_paid'    => 'float',
+        'currency'      => 'string',
+        'formula'       => 'json',
+        'canceled_at'   => 'datetime:Y-m-d H:i:s',
+        'options'       => 'array',
+        'notes'         => 'string',
     ];
-
-    /**
-     * {@inheritdoc}
-     */
-    protected $observables = [
-        'validating',
-        'validated',
-    ];
-
-    /**
-     * The default rules that the model will validate against.
-     *
-     * @var array
-     */
-    protected $rules = [];
-
-    /**
-     * Whether the model should throw a
-     * ValidationException if it fails validation.
-     *
-     * @var bool
-     */
-    protected $throwValidationExceptions = true;
 
     /**
      * Create a new Eloquent model instance.
@@ -92,20 +71,21 @@ abstract class BookableBooking extends ModelAbstract
     public function __construct(array $attributes = [])
     {
         $this->mergeRules([
-            'bookable_id' => 'required|integer',
-            'bookable_type' => 'required|string|strip_tags|max:150',
-            'customer_id' => 'required|integer',
-            'customer_type' => 'required|string|strip_tags|max:150',
-            'starts_at' => 'required|date',
-            'ends_at' => 'required|date',
-            'price' => 'required|numeric',
-            'quantity' => 'required|integer',
-            'total_paid' => 'required|numeric',
-            'currency' => 'required|alpha|size:3',
-            'formula' => 'nullable|array',
-            'canceled_at' => 'nullable|date',
-            'options' => 'nullable|array',
-            'notes' => 'nullable|string|strip_tags|max:32768',
+            'bookable_id'   => ['required', new UuidRule],
+            'bookable_type' => ['required', 'string', 'max:150'],
+            'customer_id'   => ['required', new UuidRule],
+            'customer_type' => ['required', 'string', 'max:150'],
+            'starts_at'     => ['required', 'date:Y-m-d H:i:s'],
+            'ends_at'       => ['required', 'date:Y-m-d H:i:s', 'after_or_equal:starts_at'],
+            'price'         => ['nullable', 'numeric'],
+            'quantity'      => ['nullable', 'integer'],
+            'total_paid'    => ['nullable', 'numeric'],
+            'currency'      => ['nullable', new UuidRule],
+            'formula'       => ['nullable', 'array'],
+            'canceled_at'   => ['nullable', 'date:Y-m-d H:i:s'],
+            'options'       => ['nullable', 'array'],
+            'notes'         => ['nullable', 'string', 'max:32768'],
+            'status'        => ['nullable', Rule::in(StatusEnum::keys())],
         ]);
 
         parent::__construct($attributes);
@@ -120,14 +100,70 @@ abstract class BookableBooking extends ModelAbstract
     {
         parent::boot();
 
-        //static::validating(function (self $bookableAvailability) {
-        //    $calculatedPrice = is_null($bookableAvailability->price)
-        //        ? $bookableAvailability->calculatePrice($bookableAvailability->bookable, $bookableAvailability->starts_at, $bookableAvailability->ends_at) : [$bookableAvailability->price, $bookableAvailability->formula, $bookableAvailability->currency];
-        //
-        //    $bookableAvailability->currency = $calculatedPrice['currency'];
-        //    $bookableAvailability->formula = $calculatedPrice['formula'];
-        //    $bookableAvailability->price = $calculatedPrice['price'];
-        //});
+        static::validating(function (self $bookableAvailability) {
+            $calculatedPrice = is_null($bookableAvailability->price)
+                ? $bookableAvailability->calculatePrice(
+                    $bookableAvailability->bookable,
+                    $bookableAvailability->starts_at,
+                    $bookableAvailability->ends_at
+                ) : [
+                    $bookableAvailability->price,
+                    $bookableAvailability->formula,
+                    $bookableAvailability->currency
+                ];
+
+            $bookableAvailability->currency = $calculatedPrice->currency;
+            $bookableAvailability->formula = $calculatedPrice->formula;
+            $bookableAvailability->price = $calculatedPrice->price;
+        });
+    }
+
+    public function create($data, Model $customer, Model $bookable)
+    {
+        $data['currency'] = Currency::verifyCurrency($data['currency']);
+
+        $booking = parent::make($data);
+        $booking->customer()->associate($customer);
+        $booking->bookable()->associate($bookable);
+
+        if ($booking->save()) {
+            $ticket = BookableTicket::make($data);
+            $ticket->bookable()->associate($booking);
+            $ticket->responsable()->associate($customer);
+        }
+
+        return $booking;
+    }
+
+    public function currency()
+    {
+        return $this->hasOne(Currency::class, 'currency', 'id');
+    }
+
+    public function getCurrencyAttribute()
+    {
+        $currency = Currency::find($this->currency);
+        return $currency->code;
+    }
+
+    /**
+     * Get the owning resource model.
+     *
+     * @return \Illuminate\Database\Eloquent\Relations\MorphTo
+     */
+    public function bookable(): MorphTo
+    {
+        return $this->morphTo('bookable', 'bookable_type', 'bookable_id', 'id');
+    }
+
+    /**
+     * Get the booking customer.
+     *
+     * @return \Illuminate\Database\Eloquent\Relations\MorphTo
+     */
+    public function customer(): MorphTo
+    {
+        return $this->morphTo('customer', 'customer_type', 'customer_id', 'id');
     }
 
     /**
@@ -160,9 +196,9 @@ abstract class BookableBooking extends ModelAbstract
      * @param \Carbon\Carbon                      $endsAt
      * @param int                                 $quantity
      *
-     * @return array
+     * @return Illuminate\Support\Fluent
      */
-    public function calculatePrice(Model $bookable, Carbon $startsAt, Carbon $endsAt = null, int $quantity = 1): array
+    public function calculatePrice(Model $bookable, Carbon $startsAt, Carbon $endsAt = null, int $quantity = 1): Fluent
     {
         $totalUnits = 0;
 
@@ -182,34 +218,14 @@ abstract class BookableBooking extends ModelAbstract
                 break;
         }
 
-        return [
+        return new Fluent([
             'base_cost' => $bookable->base_cost,
             'unit_cost' => $bookable->unit_cost,
             'unit' => $bookable->unit,
             'currency' => $bookable->currency,
             'total_units' => $totalUnits,
             'total_price' => $totalPrice,
-        ];
-    }
-
-    /**
-     * Get the owning resource model.
-     *
-     * @return \Illuminate\Database\Eloquent\Relations\MorphTo
-     */
-    public function bookable(): MorphTo
-    {
-        return $this->morphTo('bookable', 'bookable_type', 'bookable_id', 'id');
-    }
-
-    /**
-     * Get the booking customer.
-     *
-     * @return \Illuminate\Database\Eloquent\Relations\MorphTo
-     */
-    public function customer(): MorphTo
-    {
-        return $this->morphTo('customer', 'customer_type', 'customer_id', 'id');
+        ]);
     }
 
     /**
@@ -493,5 +509,10 @@ abstract class BookableBooking extends ModelAbstract
     public function isCurrent(): bool
     {
         return !$this->isCancelled() && Carbon::now()->between($this->starts_at, $this->ends_at);
+    }
+
+    protected static function newFactory(): Factory
+    {
+        return BookableBookingFactory::new();
     }
 }

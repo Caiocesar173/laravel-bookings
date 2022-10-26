@@ -29,7 +29,10 @@ trait HasBookingsTrait
      *
      * @return string
      */
-    abstract public static function getBookingModel(): string;
+    public static function getBookingModel(): string
+    {
+        return BookableBooking::class;
+    }
 
     /**
      * Boot the HasBookings trait for the model.
@@ -84,7 +87,7 @@ trait HasBookingsTrait
      * @param string                              $startsAt
      * @param string                              $endsAt
      *
-     * @return \Rinvex\Bookings\Models\BookableBooking
+     * @return \Caiocesar173\Booking\Entities\BookableBooking
      */
     public function newBooking(Model $bookable, string $startsAt, string $endsAt): BookableBooking
     {
