@@ -2,6 +2,7 @@
 
 namespace Caiocesar173\Booking\Traits;
 
+use Caiocesar173\Booking\Entities\BookableBooking;
 use Caiocesar173\Booking\Entities\TicketableBooking;
 
 use Illuminate\Database\Eloquent\Model;
@@ -45,14 +46,20 @@ trait TicketableTrait
      *
      * @return string
      */
-    abstract public function getBookingModel(): string;
+    public static function getBookingModel(): string
+    {
+        return BookableBooking::class;
+    }
 
     /**
      * Get the ticket model name.
      *
      * @return string
      */
-    abstract public function getTicketModel(): string;
+    public static function getTicketModel(): string
+    {
+        return TicketableBooking::class;
+    }
 
     /**
      * Boot the Ticketable trait for the model.
@@ -120,7 +127,7 @@ trait TicketableTrait
      * @param float                               $paid
      * @param string                              $currency
      *
-     * @return \Rinvex\Bookings\Models\TicketableBooking
+     * @return \Caiocesar173\Booking\Entities\TicketableBooking
      */
     public function newBooking(Model $customer, float $paid, string $currency): TicketableBooking
     {

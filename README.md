@@ -35,17 +35,16 @@ This package is based uppon, [laravel-bookings](https://github.com/rinvex/larave
 ## Usage
 ### Add bookable functionality to your resource model
 
-To add bookable functionality to your resource model just use the `\Caiocesar173\Booking\Traits\BookableTrait` trait like this:
+To add bookable functionality to your resource model just extend the `Caiocesar173\Booking\Entities\Bookable` model like this:
 
 ```php
 namespace App\Models;
 
-use Caiocesar173\Booking\Traits\BookableTrait;
-use Illuminate\Database\Eloquent\Model;
+use Caiocesar173\Booking\Entities\Bookable;
 
-class Room extends Model
+class Room extends Bookable
 {
-    use BookableTrait;
+    ...
 }
 ```
 
@@ -162,7 +161,7 @@ Alternatively you can create a new booking rate explicitly as follows:
 ```php
 $room = \App\Models\Room::find(1);
 
-// Extends \Caiocesar173\Booking\Models\BookableRate
+// Extends \Caiocesar173\Booking\Models\BookableFee
 $serviceRate = new \App\Models\ServiceRate;
 
 $serviceRate->make(['percentage' => '15', 'operator' => '^', 'amount' => 2])

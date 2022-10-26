@@ -2,7 +2,11 @@
 
 namespace Caiocesar173\Booking\Traits;
 
+use Caiocesar173\Utils\Exceptions\ApiException;
+
+use Caiocesar173\Booking\Entities\BookableFee;
 use Caiocesar173\Booking\Entities\BookableBooking;
+use Caiocesar173\Booking\Entities\BookableAvailability;
 
 use Carbon\Carbon;
 use Illuminate\Database\Eloquent\Model;
@@ -11,15 +15,6 @@ use Illuminate\Database\Eloquent\Relations\MorphMany;
 trait BookableTrait
 {
     use BookingScopesTrait;
-
-    /**
-     * Register a saved model event with the dispatcher.
-     *
-     * @param \Closure|string $callback
-     *
-     * @return void
-     */
-    abstract public static function saved($callback);
 
     /**
      * Register a deleted model event with the dispatcher.
@@ -44,32 +39,11 @@ trait BookableTrait
     abstract public function morphMany($related, $name, $type = null, $id = null, $localKey = null);
 
     /**
-     * Get the booking model name.
-     *
-     * @return string
-     */
-    abstract public static function getBookingModel(): string;
-
-    /**
-     * Get the rate model name.
-     *
-     * @return string
-     */
-    abstract public static function getRateModel(): string;
-
-    /**
-     * Get the availability model name.
-     *
-     * @return string
-     */
-    abstract public static function getAvailabilityModel(): string;
-
-    /**
      * Boot the Bookable trait for the model.
      *
      * @return void
      */
-    public static function bootBookable()
+    public static function bootBookableTrait()
     {
         static::deleted(function (self $model) {
             $model->bookings()->delete();
@@ -119,6 +93,10 @@ trait BookableTrait
         static::saved(function (self $model) use ($availabilities) {
             $this->availabilities()->sync($availabilities);
         });
+
+        static::created(function (self $model) use ($availabilities) {
+            $this->availabilities()->sync($availabilities);
+        });
     }
 
     /**
@@ -128,7 +106,7 @@ trait BookableTrait
      */
     public function bookings(): MorphMany
     {
-        return $this->morphMany(static::getBookingModel(), 'bookable', 'bookable_type', 'bookable_id');
+        return $this->morphMany(BookableBooking::class, 'bookable', 'bookable_type', 'bookable_id');
     }
 
     /**
@@ -150,7 +128,7 @@ trait BookableTrait
      */
     public function availabilities(): MorphMany
     {
-        return $this->morphMany(static::getAvailabilityModel(), 'bookable', 'bookable_type', 'bookable_id');
+        return $this->morphMany(BookableAvailability::class, 'bookable', 'bookable_type', 'bookable_id');
     }
 
     /**
@@ -160,7 +138,7 @@ trait BookableTrait
      */
     public function rates(): MorphMany
     {
-        return $this->morphMany(static::getRateModel(), 'bookable', 'bookable_type', 'bookable_id');
+        return $this->morphMany(BookableFee::class, 'bookable', 'bookable_type', 'bookable_id');
     }
 
     /**
@@ -170,17 +148,19 @@ trait BookableTrait
      * @param string                              $startsAt
      * @param string                              $endsAt
      *
-     * @return \Rinvex\Bookings\Models\BookableBooking
+     * @return \Caiocesar173\Booking\Entities\BookableBooking
      */
     public function newBooking(Model $customer, string $startsAt, string $endsAt): BookableBooking
     {
-        return $this->bookings()->create([
-            'bookable_id' => static::getKey(),
-            'bookable_type' => static::getMorphClass(),
-            'customer_id' => $customer->getKey(),
-            'customer_type' => $customer->getMorphClass(),
+        $data = [
             'starts_at' => (new Carbon($startsAt))->toDateTimeString(),
             'ends_at' => (new Carbon($endsAt))->toDateTimeString(),
-        ]);
+        ];
+        
+        $booking = $this->bookings()->make($data)->customer()->associate($customer);
+
+        if ($booking->save()) return $booking;
+
+        throw new ApiException('Não foi possivel realizar o agendamento', 400);
     }
 }

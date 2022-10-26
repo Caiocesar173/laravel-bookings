@@ -19,15 +19,17 @@ class CreateBookableBookingsTable extends Migration
             $table->uuidMorphs('bookable');
             $table->uuidMorphs('customer');
 
-            $table->dateTime('starts_at')->nullable();
-            $table->dateTime('ends_at')->nullable();
-            $table->dateTime('canceled_at')->nullable();
+            $table->timestamp('starts_at')->nullable();
+            $table->timestamp('ends_at')->nullable();
+            $table->timestamp('canceled_at')->nullable();
 
             $table->string('timezone')->nullable();
-            $table->decimal('price')->default('0.00');
-            $table->integer('quantity')->unsigned();
-            $table->decimal('total_paid')->default('0.00');
-            $table->string('currency', 3);
+            $table->decimal('price')->nullable()->default(0.00);
+            $table->integer('quantity')->unsigned()->default(1);
+            $table->decimal('total_paid', 11, 2)->default(0.00);
+
+			$table->foreignUuid('currencies')->references('id')->on('currencies')->onDelete('cascade');
+
             $table->json('formula')->nullable();
             $table->schemalessAttributes('options');
             $table->text('notes')->nullable();
@@ -45,6 +47,7 @@ class CreateBookableBookingsTable extends Migration
      */
     public function down()
     {
+        Schema::disableForeignKeyConstraints();
         Schema::dropIfExists('bookable_bookings');
     }
 }
