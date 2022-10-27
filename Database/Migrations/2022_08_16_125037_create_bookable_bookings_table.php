@@ -1,11 +1,12 @@
 <?php
 
 use Caiocesar173\Utils\Enum\StatusEnum;
-use Illuminate\Database\Migrations\Migration;
-use Illuminate\Database\Schema\Blueprint;
-use Illuminate\Support\Facades\Schema;
 
-class CreateBookableBookingsTable extends Migration
+use Illuminate\Support\Facades\Schema;
+use Illuminate\Database\Schema\Blueprint;
+use Illuminate\Database\Migrations\Migration;
+
+return new class extends Migration
 {
     /**
      * Run the migrations.
@@ -50,4 +51,4 @@ class CreateBookableBookingsTable extends Migration
         Schema::disableForeignKeyConstraints();
         Schema::dropIfExists('bookable_bookings');
     }
-}
+};

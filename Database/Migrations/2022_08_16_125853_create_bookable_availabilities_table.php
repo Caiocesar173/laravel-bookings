@@ -1,12 +1,13 @@
 <?php
 
-use Caiocesar173\Booking\Enum\DatesRangeEnum;
 use Caiocesar173\Utils\Enum\StatusEnum;
-use Illuminate\Database\Migrations\Migration;
-use Illuminate\Database\Schema\Blueprint;
-use Illuminate\Support\Facades\Schema;
+use Caiocesar173\Booking\Enum\DatesRangeEnum;
 
-class CreateBookableAvailabilitiesTable extends Migration
+use Illuminate\Support\Facades\Schema;
+use Illuminate\Database\Schema\Blueprint;
+use Illuminate\Database\Migrations\Migration;
+
+return new class extends Migration
 {
     /**
      * Run the migrations.
@@ -39,4 +40,4 @@ class CreateBookableAvailabilitiesTable extends Migration
         Schema::disableForeignKeyConstraints();
         Schema::dropIfExists('bookable_availabilities');
     }
-}
+};
